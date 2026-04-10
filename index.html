@@ -1316,12 +1316,11 @@ function exportExpenses() {
     const items = expenses.filter(e => e.day === day);
     if (!items.length) continue;
     const sub = items.reduce((s, e) => s + (e.amount||0), 0);
-    txt += `【${day}】小計 $${sub.toLocaleString()}\n`;
+    txt += `【${day}】小計 $${sub}\n`;
     items.forEach((e, idx) => {
-      txt += `  ${e.settled ? '✅' : '⬜'} ${e.category} — ${e.description}：$${(e.amount||0).toLocaleString()} (${e.uploader||'—'})`;
+      txt += `  ${e.settled ? '✅' : '⬜'} ${e.category} — ${e.description}：$${e.amount||0} (${e.uploader||'—'})`;
       if (e.receipt_urls && e.receipt_urls.length) txt += ` 📷${e.receipt_urls.length}張`;
       txt += '\n';
-      // 附上收據連結
       if (e.receipt_urls && e.receipt_urls.length) {
         e.receipt_urls.forEach((url, i) => {
           txt += `    收據${i+1}: ${url}\n`;
@@ -1331,9 +1330,9 @@ function exportExpenses() {
     txt += '\n';
   }
   txt += '='.repeat(40) + '\n';
-  txt += `總計：$${total.toLocaleString()}\n`;
-  txt += `已結算：$${expenses.filter(e => e.settled).reduce((s,e) => s + (e.amount||0), 0).toLocaleString()}\n`;
-  txt += `待結算：$${expenses.filter(e => !e.settled).reduce((s,e) => s + (e.amount||0), 0).toLocaleString()}\n`;
+  txt += `總計：$${total}\n`;
+  txt += `已結算：$${expenses.filter(e => e.settled).reduce((s,e) => s + (e.amount||0), 0)}\n`;
+  txt += `待結算：$${expenses.filter(e => !e.settled).reduce((s,e) => s + (e.amount||0), 0)}\n`;
 
   // 同時產生 CSV（方便 Excel 開啟）
   let csv = '\uFEFF日期,類別,說明,金額,記錄人,已結算,收據連結\n';
