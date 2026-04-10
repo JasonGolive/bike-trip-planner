@@ -1343,7 +1343,7 @@ function exportExpenses() {
   });
 
   // 下載 TXT
-  const blob1 = new Blob([txt], { type: 'text/plain;charset=utf-8' });
+  const blob1 = new Blob(['\uFEFF' + txt], { type: 'text/plain;charset=utf-8' });
   const a1 = document.createElement('a');
   a1.href = URL.createObjectURL(blob1);
   a1.download = '花東單車費用結算.txt';
