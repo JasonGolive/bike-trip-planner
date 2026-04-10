@@ -6,6 +6,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#1a73e8">
 <title>花東單車計畫 — 旅遊管理系統</title>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-storage-compat.js"></script>
 <style>
 :root {
   --primary: #1a73e8;
@@ -449,6 +452,77 @@ body {
   justify-content: flex-end;
   margin-bottom: 12px;
 }
+/* User Name Banner */
+.user-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--primary-light);
+  border-radius: 8px;
+  margin-bottom: 12px;
+  font-size: 13px;
+}
+.user-banner strong { color: var(--primary); }
+.user-banner button { margin-left: auto; }
+/* Uploader tag */
+.exp-uploader {
+  font-size: 10px;
+  color: var(--text-sec);
+  display: block;
+}
+/* Receipt lightbox */
+.lightbox {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.85);
+  z-index: 200;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  gap: 10px;
+}
+.lightbox.show { display: flex; }
+.lightbox img {
+  max-width: 90vw;
+  max-height: 80vh;
+  border-radius: 8px;
+}
+.lightbox .close-lb {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  color: #fff;
+  font-size: 28px;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+.receipt-thumbs { display: flex; gap: 4px; margin-top: 4px; }
+.receipt-thumbs img {
+  width: 36px;
+  height: 36px;
+  object-fit: cover;
+  border-radius: 4px;
+  cursor: pointer;
+  border: 1px solid var(--border);
+}
+/* Upload progress */
+.upload-progress {
+  height: 4px;
+  background: var(--gray-bg);
+  border-radius: 2px;
+  margin-top: 8px;
+  overflow: hidden;
+  display: none;
+}
+.upload-progress .bar {
+  height: 100%;
+  background: var(--primary);
+  width: 0%;
+  transition: width .3s;
+}
 </style>
 </head>
 <body>
@@ -488,8 +562,51 @@ body {
 
   </div>
 </div>
+<!-- Receipt Lightbox -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <button class="close-lb" onclick="closeLightbox()">✕</button>
+  <img id="lb-img" src="" alt="收據">
+  <div style="color:#fff;font-size:12px" id="lb-caption"></div>
+</div>
 
 <script>
+// ===== FIREBASE INIT =====
+firebase.initializeApp({
+  apiKey: "AIzaSyC7zXTecJKNV2U0U9FH_nskEnl4hqKwRF8",
+  authDomain: "bike-trip-planner-a0e0b.firebaseapp.com",
+  projectId: "bike-trip-planner-a0e0b",
+  storageBucket: "bike-trip-planner-a0e0b.firebasestorage.app",
+  messagingSenderId: "376203087528",
+  appId: "1:376203087528:web:ff37b4710dc35d8542fc9d",
+});
+const db = firebase.firestore();
+const stg = firebase.storage();
+
+// ===== USER NAME =====
+function getUserName() {
+  return localStorage.getItem('userName') || '';
+}
+function setUserName(name) {
+  localStorage.setItem('userName', name);
+}
+function promptUserName() {
+  const name = prompt('請輸入你的名字（用於標記費用記錄與收據）');
+  if (name && name.trim()) {
+    setUserName(name.trim());
+    renderExpenses();
+  }
+}
+
+// ===== LIGHTBOX =====
+function showLightbox(url, caption) {
+  document.getElementById('lb-img').src = url;
+  document.getElementById('lb-caption').textContent = caption || '';
+  document.getElementById('lightbox').classList.add('show');
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('show');
+}
+
 // ===== DATA =====
 
 const POIS = {
@@ -929,24 +1046,26 @@ function removeCustomDiet(idx) {
   renderDietary();
 }
 
-// ===== RENDER EXPENSES =====
+// ===== RENDER EXPENSES (Firebase) =====
 
-function getExpenses() {
-  return JSON.parse(localStorage.getItem('expenses') || '[]');
-}
-function saveExpenses(list) {
-  localStorage.setItem('expenses', JSON.stringify(list));
-}
+let allExpenses = [];
+let pendingFiles = [];
+
+// Real-time listener — auto-updates when anyone adds/edits/deletes
+db.collection('expenses').orderBy('created_at', 'asc').onSnapshot(snap => {
+  allExpenses = snap.docs.map(d => ({ _id: d.id, ...d.data() }));
+  renderExpenses();
+});
 
 function renderExpenses() {
   const el = document.getElementById('expenses');
-  const expenses = getExpenses();
+  const userName = getUserName();
+  const expenses = allExpenses;
 
-  const total = expenses.reduce((s, e) => s + e.amount, 0);
-  const withReceipt = expenses.filter(e => e.receipt_images && e.receipt_images.length > 0).length;
-  const unsettled = expenses.filter(e => !e.settled).reduce((s, e) => s + e.amount, 0);
+  const total = expenses.reduce((s, e) => s + (e.amount||0), 0);
+  const withReceipt = expenses.filter(e => e.receipt_urls && e.receipt_urls.length > 0).length;
+  const unsettled = expenses.filter(e => !e.settled).reduce((s, e) => s + (e.amount||0), 0);
 
-  // Group by day
   const dayOrder = ['4/12','4/13','4/14','4/15','4/16','4/17','其他'];
   const grouped = {};
   expenses.forEach(e => {
@@ -959,25 +1078,36 @@ function renderExpenses() {
   for (const day of dayOrder) {
     const items = grouped[day];
     if (!items || items.length === 0) continue;
-    const dayTotal = items.reduce((s, e) => s + e.amount, 0);
+    const dayTotal = items.reduce((s, e) => s + (e.amount||0), 0);
     listHtml += `<div class="day-group-header"><span>${day}</span><span>小計 $${dayTotal.toLocaleString()}</span></div>`;
-    listHtml += items.map(e => `
+    listHtml += items.map(e => {
+      const receipts = (e.receipt_urls || []).map((url, i) =>
+        `<img src="${url}" onclick="event.stopPropagation();showLightbox('${url}','${e.description} — 收據${i+1}')">`
+      ).join('');
+      return `
       <div class="expense-item ${e.settled ? 'settled' : ''}">
         <span class="exp-cat cat-${e.category}">${e.category}</span>
         <span class="exp-desc">
           ${e.description}
-          ${e.receipt_images && e.receipt_images.length ? `<span class="badge badge-warning">📷${e.receipt_images.length}</span>` : ''}
+          ${e.receipt_urls && e.receipt_urls.length ? `<span class="badge badge-warning">📷${e.receipt_urls.length}</span>` : ''}
+          <span class="exp-uploader">${e.uploader || '—'}</span>
+          ${receipts ? `<div class="receipt-thumbs">${receipts}</div>` : ''}
         </span>
-        <span class="exp-amount">$${e.amount.toLocaleString()}</span>
+        <span class="exp-amount">$${(e.amount||0).toLocaleString()}</span>
         <span class="exp-actions">
-          <button class="btn btn-sm ${e.settled ? 'btn-outline' : 'btn-success'}" onclick="toggleSettle(${e.id})">${e.settled ? '取消' : '結算'}</button>
-          <button class="btn btn-sm btn-danger" onclick="deleteExpense(${e.id})">✕</button>
+          <button class="btn btn-sm ${e.settled ? 'btn-outline' : 'btn-success'}" onclick="toggleSettle('${e._id}')">${e.settled ? '取消' : '結算'}</button>
+          <button class="btn btn-sm btn-danger" onclick="deleteExpense('${e._id}')">✕</button>
         </span>
-      </div>
-    `).join('');
+      </div>`;
+    }).join('');
   }
 
+  const userBanner = userName
+    ? `<div class="user-banner">👤 目前使用者：<strong>${userName}</strong><button class="btn btn-sm btn-outline" onclick="promptUserName()">更換</button></div>`
+    : `<div class="user-banner" style="background:var(--warning-bg)">⚠️ 尚未設定名字 <button class="btn btn-sm btn-primary" onclick="promptUserName()">設定名字</button></div>`;
+
   el.innerHTML = `
+    ${userBanner}
     <div class="stats-grid">
       <div class="stat-card"><div class="stat-val">$${total.toLocaleString()}</div><div class="stat-label">總支出</div></div>
       <div class="stat-card"><div class="stat-val">${withReceipt}</div><div class="stat-label">有憑證</div></div>
@@ -1013,68 +1143,109 @@ function renderExpenses() {
         </label>
       </div>
       <div class="receipt-preview" id="receipt-preview"></div>
-      <button class="btn btn-primary" onclick="addExpense()" style="width:100%;margin-top:8px">＋ 新增費用</button>
+      <div class="upload-progress" id="upload-progress"><div class="bar" id="upload-bar"></div></div>
+      <button class="btn btn-primary" id="btn-add-expense" onclick="addExpense()" style="width:100%;margin-top:8px">＋ 新增費用</button>
     </div>
 
     <div class="card">
-      ${listHtml || '<div style="padding:24px;text-align:center;color:var(--text-sec)">尚無費用記錄</div>'}
+      ${listHtml || '<div style="padding:24px;text-align:center;color:var(--text-sec)">尚無費用記錄 — 所有人共享即時同步</div>'}
     </div>
   `;
 }
 
-let pendingReceipts = [];
 function previewReceipts(input) {
-  pendingReceipts = [];
+  pendingFiles = [...input.files];
   const preview = document.getElementById('receipt-preview');
   preview.innerHTML = '';
-  for (const file of input.files) {
-    const reader = new FileReader();
-    reader.onload = e => {
-      pendingReceipts.push(e.target.result);
-      preview.innerHTML += `<img src="${e.target.result}">`;
-    };
-    reader.readAsDataURL(file);
+  for (const file of pendingFiles) {
+    const url = URL.createObjectURL(file);
+    preview.innerHTML += `<img src="${url}">`;
   }
 }
 
-function addExpense() {
+async function uploadReceipts(docId) {
+  const urls = [];
+  const progEl = document.getElementById('upload-progress');
+  const barEl = document.getElementById('upload-bar');
+  if (pendingFiles.length === 0) return urls;
+  progEl.style.display = 'block';
+  for (let i = 0; i < pendingFiles.length; i++) {
+    const file = pendingFiles[i];
+    const ext = file.name.split('.').pop() || 'jpg';
+    const ref = stg.ref(`receipts/${docId}/${Date.now()}_${i}.${ext}`);
+    await ref.put(file);
+    const url = await ref.getDownloadURL();
+    urls.push(url);
+    barEl.style.width = `${Math.round(((i+1)/pendingFiles.length)*100)}%`;
+  }
+  progEl.style.display = 'none';
+  barEl.style.width = '0%';
+  return urls;
+}
+
+async function addExpense() {
+  const userName = getUserName();
+  if (!userName) { promptUserName(); return; }
   const day = document.getElementById('exp-day').value;
   const category = document.getElementById('exp-cat').value;
   const description = document.getElementById('exp-desc').value.trim();
   const amount = parseInt(document.getElementById('exp-amount').value);
-  if (!description || !amount) return;
-  const list = getExpenses();
-  list.push({
-    id: Date.now(),
-    day, category, description, amount,
-    receipt_images: [...pendingReceipts],
-    settled: false,
-    created_at: new Date().toISOString(),
-  });
-  saveExpenses(list);
-  pendingReceipts = [];
-  renderExpenses();
+  if (!description || !amount) { alert('請填寫說明和金額'); return; }
+
+  const btn = document.getElementById('btn-add-expense');
+  btn.disabled = true;
+  btn.textContent = '上傳中...';
+
+  try {
+    const docRef = await db.collection('expenses').add({
+      day, category, description, amount,
+      receipt_urls: [],
+      settled: false,
+      uploader: userName,
+      created_at: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+
+    if (pendingFiles.length > 0) {
+      const urls = await uploadReceipts(docRef.id);
+      await docRef.update({ receipt_urls: urls });
+    }
+
+    pendingFiles = [];
+    document.getElementById('exp-desc').value = '';
+    document.getElementById('exp-amount').value = '';
+    const preview = document.getElementById('receipt-preview');
+    if (preview) preview.innerHTML = '';
+  } catch (err) {
+    alert('上傳失敗：' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '＋ 新增費用';
+  }
 }
 
-function toggleSettle(id) {
-  const list = getExpenses();
-  const item = list.find(e => e.id === id);
-  if (item) item.settled = !item.settled;
-  saveExpenses(list);
-  renderExpenses();
+async function toggleSettle(docId) {
+  const item = allExpenses.find(e => e._id === docId);
+  if (item) {
+    await db.collection('expenses').doc(docId).update({ settled: !item.settled });
+  }
 }
 
-function deleteExpense(id) {
+async function deleteExpense(docId) {
   if (!confirm('確定要刪除此筆費用？')) return;
-  const list = getExpenses().filter(e => e.id !== id);
-  saveExpenses(list);
-  renderExpenses();
+  const item = allExpenses.find(e => e._id === docId);
+  // Delete receipt files from storage
+  if (item && item.receipt_urls) {
+    for (const url of item.receipt_urls) {
+      try { await stg.refFromURL(url).delete(); } catch(e) {}
+    }
+  }
+  await db.collection('expenses').doc(docId).delete();
 }
 
 function exportExpenses() {
-  const expenses = getExpenses();
+  const expenses = allExpenses;
   if (expenses.length === 0) { alert('無費用記錄可匯出'); return; }
-  const total = expenses.reduce((s, e) => s + e.amount, 0);
+  const total = expenses.reduce((s, e) => s + (e.amount||0), 0);
   let txt = '花東單車計畫 — 費用結算摘要\n';
   txt += `匯出日期：${new Date().toLocaleDateString('zh-TW')}\n`;
   txt += '='.repeat(40) + '\n\n';
@@ -1082,17 +1253,19 @@ function exportExpenses() {
   for (const day of dayOrder) {
     const items = expenses.filter(e => e.day === day);
     if (!items.length) continue;
-    const sub = items.reduce((s, e) => s + e.amount, 0);
+    const sub = items.reduce((s, e) => s + (e.amount||0), 0);
     txt += `【${day}】小計 $${sub.toLocaleString()}\n`;
     items.forEach(e => {
-      txt += `  ${e.settled ? '✅' : '⬜'} ${e.category} — ${e.description}：$${e.amount.toLocaleString()}\n`;
+      txt += `  ${e.settled ? '✅' : '⬜'} ${e.category} — ${e.description}：$${(e.amount||0).toLocaleString()} (${e.uploader||'—'})`;
+      if (e.receipt_urls && e.receipt_urls.length) txt += ` 📷${e.receipt_urls.length}`;
+      txt += '\n';
     });
     txt += '\n';
   }
   txt += '='.repeat(40) + '\n';
   txt += `總計：$${total.toLocaleString()}\n`;
-  txt += `已結算：$${expenses.filter(e => e.settled).reduce((s,e) => s + e.amount, 0).toLocaleString()}\n`;
-  txt += `待結算：$${expenses.filter(e => !e.settled).reduce((s,e) => s + e.amount, 0).toLocaleString()}\n`;
+  txt += `已結算：$${expenses.filter(e => e.settled).reduce((s,e) => s + (e.amount||0), 0).toLocaleString()}\n`;
+  txt += `待結算：$${expenses.filter(e => !e.settled).reduce((s,e) => s + (e.amount||0), 0).toLocaleString()}\n`;
 
   const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });
   const a = document.createElement('a');
@@ -1126,7 +1299,7 @@ renderItinerary();
 renderMaps();
 renderContacts();
 renderDietary();
-renderExpenses();
+// renderExpenses() is triggered automatically by Firestore onSnapshot listener
 handleHash();
 </script>
 </body>
