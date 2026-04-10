@@ -1308,38 +1308,103 @@ function exportExpenses() {
   const expenses = allExpenses;
   if (expenses.length === 0) { alert('無費用記錄可匯出'); return; }
   const total = expenses.reduce((s, e) => s + (e.amount||0), 0);
-  let txt = '花東單車計畫 — 費用結算摘要\n';
+  const settled = expenses.filter(e => e.settled).reduce((s,e) => s + (e.amount||0), 0);
+  const unsettled = expenses.filter(e => !e.settled).reduce((s,e) => s + (e.amount||0), 0);
+  const dayOrder = ['4/12','4/13','4/14','4/15','4/16','4/17'];
+  const dayLabel = {'4/12':'D1','4/13':'D2','4/14':'D3','4/15':'D4','4/16':'D5','4/17':'D6'};
+
+  // ── TXT 報表 ──
+  let txt = '花東單車計畫 — 費用結算摘要（全員匯總）\n';
   txt += `匯出日期：${new Date().toLocaleDateString('zh-TW')}\n`;
   txt += '='.repeat(40) + '\n\n';
-  const dayOrder = ['4/12','4/13','4/14','4/15','4/16','4/17'];
+
+  // 1) 按人員匯總
+  txt += '【按人員匯總】\n';
+  const byPerson = {};
+  expenses.forEach(e => {
+    const name = e.uploader || '未知';
+    if (!byPerson[name]) byPerson[name] = { total: 0, count: 0, receipts: 0 };
+    byPerson[name].total += (e.amount||0);
+    byPerson[name].count += 1;
+    byPerson[name].receipts += (e.receipt_urls ? e.receipt_urls.length : 0);
+  });
+  Object.entries(byPerson).sort((a,b) => b[1].total - a[1].total).forEach(([name, d]) => {
+    txt += `  ${name}：$${d.total}（${d.count}筆｜📷${d.receipts}張）\n`;
+  });
+  txt += '\n';
+
+  // 2) 按日期匯總
+  txt += '【按日期匯總】\n';
   for (const day of dayOrder) {
     const items = expenses.filter(e => e.day === day);
     if (!items.length) continue;
     const sub = items.reduce((s, e) => s + (e.amount||0), 0);
-    txt += `【${day}】小計 $${sub}\n`;
-    items.forEach((e, idx) => {
+    txt += `  ${day} ${dayLabel[day]}：$${sub}（${items.length}筆）\n`;
+  }
+  txt += '\n';
+
+  // 3) 按類別匯總
+  txt += '【按類別匯總】\n';
+  const byCat = {};
+  expenses.forEach(e => {
+    const cat = e.category || '其他';
+    byCat[cat] = (byCat[cat]||0) + (e.amount||0);
+  });
+  Object.entries(byCat).sort((a,b) => b[1] - a[1]).forEach(([cat, amt]) => {
+    txt += `  ${cat}：$${amt}\n`;
+  });
+  txt += '\n';
+
+  // 4) 明細（按日期）
+  txt += '='.repeat(40) + '\n';
+  txt += '【明細記錄】\n\n';
+  for (const day of dayOrder) {
+    const items = expenses.filter(e => e.day === day);
+    if (!items.length) continue;
+    const sub = items.reduce((s, e) => s + (e.amount||0), 0);
+    txt += `【${day} ${dayLabel[day]}】小計 $${sub}\n`;
+    items.forEach(e => {
       txt += `  ${e.settled ? '✅' : '⬜'} ${e.category} — ${e.description}：$${e.amount||0} (${e.uploader||'—'})`;
       if (e.receipt_urls && e.receipt_urls.length) txt += ` 📷${e.receipt_urls.length}張`;
       txt += '\n';
       if (e.receipt_urls && e.receipt_urls.length) {
-        e.receipt_urls.forEach((url, i) => {
-          txt += `    收據${i+1}: ${url}\n`;
-        });
+        e.receipt_urls.forEach((url, i) => { txt += `    收據${i+1}: ${url}\n`; });
       }
     });
     txt += '\n';
   }
   txt += '='.repeat(40) + '\n';
   txt += `總計：$${total}\n`;
-  txt += `已結算：$${expenses.filter(e => e.settled).reduce((s,e) => s + (e.amount||0), 0)}\n`;
-  txt += `待結算：$${expenses.filter(e => !e.settled).reduce((s,e) => s + (e.amount||0), 0)}\n`;
+  txt += `已結算：$${settled}\n`;
+  txt += `待結算：$${unsettled}\n`;
 
-  // 同時產生 CSV（方便 Excel 開啟）
-  let csv = '\uFEFF日期,類別,說明,金額,記錄人,已結算,收據連結\n';
+  // ── CSV（明細 + 匯總分頁） ──
+  let csv = '\uFEFF';
+  // 明細
+  csv += '日期,天,類別,說明,金額,記錄人,已結算,收據連結\n';
   expenses.forEach(e => {
     const urls = (e.receipt_urls || []).join(' ; ');
-    csv += `"${e.day}","${e.category}","${e.description}",${e.amount||0},"${e.uploader||''}","${e.settled?'是':'否'}","${urls}"\n`;
+    csv += `"${e.day}","${dayLabel[e.day]||''}","${e.category}","${e.description}",${e.amount||0},"${e.uploader||''}","${e.settled?'是':'否'}","${urls}"\n`;
   });
+  // 空行後接匯總
+  csv += '\n\n';
+  csv += '人員匯總,,,,,\n';
+  csv += '記錄人,筆數,總金額,收據數,,\n';
+  Object.entries(byPerson).sort((a,b) => b[1].total - a[1].total).forEach(([name, d]) => {
+    csv += `"${name}",${d.count},${d.total},${d.receipts},,\n`;
+  });
+  csv += '\n';
+  csv += '日期匯總,,,,,\n';
+  csv += '日期,天,筆數,小計,,\n';
+  for (const day of dayOrder) {
+    const items = expenses.filter(e => e.day === day);
+    if (!items.length) continue;
+    csv += `"${day}","${dayLabel[day]}",${items.length},${items.reduce((s,e)=>s+(e.amount||0),0)},,\n`;
+  }
+  csv += '\n';
+  csv += `總計,,,${total},,\n`;
+  csv += `已結算,,,${settled},,\n`;
+  csv += `待結算,,,${unsettled},,\n`;
 
   // 下載 TXT
   const blob1 = new Blob(['\uFEFF' + txt], { type: 'text/plain;charset=utf-8' });
