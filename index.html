@@ -1,0 +1,1133 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1a73e8">
+<title>花東單車計畫 — 旅遊管理系統</title>
+<style>
+:root {
+  --primary: #1a73e8;
+  --primary-light: #e8f0fe;
+  --danger: #d93025;
+  --danger-bg: #fce8e6;
+  --warning: #e37400;
+  --warning-bg: #fef7e0;
+  --success: #188038;
+  --success-bg: #e6f4ea;
+  --info: #1967d2;
+  --info-bg: #e8f0fe;
+  --purple: #5a3fa0;
+  --purple-bg: #e8e0f5;
+  --gray: #5f6368;
+  --gray-bg: #f1f3f4;
+  --bg: #f8f9fa;
+  --card: #ffffff;
+  --border: #dadce0;
+  --text: #202124;
+  --text-sec: #5f6368;
+  --radius: 12px;
+  --shadow: 0 1px 3px rgba(0,0,0,.12), 0 1px 2px rgba(0,0,0,.08);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans TC", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+.app {
+  max-width: 820px;
+  margin: 0 auto;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+/* Header */
+.header {
+  background: var(--primary);
+  color: #fff;
+  padding: 12px 16px;
+  text-align: center;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.header h1 { font-size: 16px; font-weight: 600; }
+.header .subtitle { font-size: 11px; opacity: .85; margin-top: 2px; }
+/* Tab Bar */
+.tab-bar {
+  display: flex;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  position: sticky;
+  top: 52px;
+  z-index: 99;
+}
+.tab-bar::-webkit-scrollbar { display: none; }
+.tab-btn {
+  flex: 0 0 auto;
+  padding: 10px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-sec);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all .2s;
+}
+.tab-btn.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+/* Content */
+.content { flex: 1; padding: 12px; }
+.page { display: none; }
+.page.active { display: block; }
+/* Cards */
+.card {
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+.card-header {
+  padding: 12px 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.card-header:active { background: var(--gray-bg); }
+.card-header .title { font-weight: 600; font-size: 14px; flex: 1; }
+.card-header .meta { font-size: 11px; color: var(--text-sec); margin-left: 8px; }
+.card-header .arrow {
+  transition: transform .2s;
+  font-size: 12px;
+  color: var(--text-sec);
+  margin-left: 8px;
+}
+.card.open .card-header .arrow { transform: rotate(180deg); }
+.card-body { display: none; padding: 0 16px 16px; }
+.card.open .card-body { display: block; }
+/* Schedule Table */
+.schedule-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.schedule-table th {
+  background: var(--gray-bg);
+  padding: 6px 8px;
+  text-align: left;
+  font-weight: 600;
+  border-bottom: 1px solid var(--border);
+}
+.schedule-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid #f0f0f0;
+  vertical-align: top;
+}
+.schedule-table tr:last-child td { border-bottom: none; }
+.accommodation {
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: var(--success-bg);
+  border-radius: 8px;
+  font-size: 12px;
+}
+.accommodation strong { color: var(--success); }
+/* POI Button */
+.poi-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 6px;
+  background: var(--primary-light);
+  color: var(--primary);
+  border-radius: 4px;
+  font-size: 11px;
+  text-decoration: none;
+  cursor: pointer;
+  border: none;
+}
+.poi-btn:active { opacity: .7; }
+/* POI Grid */
+.poi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 10px;
+}
+.poi-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  cursor: pointer;
+  transition: box-shadow .2s;
+}
+.poi-card:active { box-shadow: var(--shadow); }
+.poi-card .poi-name { font-weight: 600; font-size: 13px; margin-bottom: 4px; }
+.poi-card .poi-info { font-size: 11px; color: var(--text-sec); }
+.poi-card .poi-phone {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 3px 8px;
+  background: var(--success-bg);
+  color: var(--success);
+  border-radius: 6px;
+  font-size: 11px;
+  text-decoration: none;
+}
+/* Category Headers */
+.cat-header {
+  font-size: 15px;
+  font-weight: 700;
+  margin: 16px 0 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.cat-header:first-child { margin-top: 0; }
+/* Contact List */
+.contact-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+.contact-item:last-child { border-bottom: none; }
+.contact-item.warning { background: var(--warning-bg); }
+.contact-info { flex: 1; }
+.contact-name { font-weight: 600; font-size: 13px; }
+.contact-role { font-size: 11px; color: var(--text-sec); }
+.contact-note { font-size: 11px; color: var(--warning); margin-top: 2px; }
+.phone-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  background: var(--success);
+  color: #fff;
+  border-radius: 20px;
+  font-size: 12px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.phone-btn:active { opacity: .8; }
+/* Emergency Numbers */
+.emergency-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.emer-card {
+  text-align: center;
+  padding: 14px;
+  border-radius: 10px;
+  background: var(--danger-bg);
+}
+.emer-card .num { font-size: 22px; font-weight: 700; color: var(--danger); }
+.emer-card .label { font-size: 11px; color: var(--text-sec); margin-top: 2px; }
+/* Student Contacts Table */
+.student-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.student-table th {
+  background: var(--gray-bg);
+  padding: 8px;
+  text-align: left;
+  font-weight: 600;
+  position: sticky;
+  top: 104px;
+}
+.student-table td { padding: 8px; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
+.student-table tr.warning td { background: var(--warning-bg); }
+/* Dietary */
+.allergy-card {
+  border-left: 4px solid;
+  padding: 12px 16px;
+  margin-bottom: 10px;
+  border-radius: 0 var(--radius) var(--radius) 0;
+  background: var(--card);
+  box-shadow: var(--shadow);
+}
+.allergy-card.danger { border-color: var(--danger); }
+.allergy-card.warning { border-color: var(--warning); }
+.allergy-card.info { border-color: var(--info); }
+.allergy-card .a-name { font-weight: 700; font-size: 14px; }
+.allergy-card .a-condition { font-size: 12px; color: var(--text-sec); }
+.allergy-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.allergy-tag {
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+}
+.allergy-tag.danger { background: var(--danger-bg); color: var(--danger); }
+.allergy-tag.warning { background: var(--warning-bg); color: var(--warning); }
+.diet-summary { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 12px; }
+.diet-summary th { background: var(--gray-bg); padding: 8px; text-align: left; font-weight: 600; }
+.diet-summary td { padding: 8px; border-bottom: 1px solid #f0f0f0; }
+/* Dynamic Dietary Form */
+.form-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+.form-input {
+  flex: 1;
+  min-width: 100px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 13px;
+  outline: none;
+}
+.form-input:focus { border-color: var(--primary); }
+.btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity .2s;
+}
+.btn:active { opacity: .7; }
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-danger { background: var(--danger); color: #fff; }
+.btn-success { background: var(--success); color: #fff; }
+.btn-outline {
+  background: var(--card);
+  color: var(--primary);
+  border: 1px solid var(--primary);
+}
+.btn-sm { padding: 4px 10px; font-size: 11px; }
+/* Expenses */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.stat-card {
+  text-align: center;
+  padding: 12px 8px;
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.stat-val { font-size: 20px; font-weight: 700; color: var(--primary); }
+.stat-label { font-size: 11px; color: var(--text-sec); }
+.expense-item {
+  display: flex;
+  align-items: center;
+  padding: 10px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  gap: 10px;
+}
+.expense-item.settled { opacity: .5; }
+.exp-cat {
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.exp-desc { flex: 1; font-size: 13px; }
+.exp-amount { font-weight: 700; font-size: 14px; white-space: nowrap; }
+.exp-actions { display: flex; gap: 4px; }
+.day-group-header {
+  padding: 8px 16px;
+  background: var(--gray-bg);
+  font-weight: 700;
+  font-size: 13px;
+  display: flex;
+  justify-content: space-between;
+}
+/* Expense Form */
+.expense-form {
+  padding: 16px;
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  margin-bottom: 12px;
+}
+.expense-form .row { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+.expense-form select, .expense-form input, .expense-form textarea {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+}
+.expense-form select:focus, .expense-form input:focus { border-color: var(--primary); }
+.receipt-preview { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0; }
+.receipt-preview img {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+/* My Maps Links */
+.map-links {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.map-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px;
+  background: var(--primary-light);
+  color: var(--primary);
+  border-radius: 10px;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+}
+.map-link:active { opacity: .7; }
+/* Section Title */
+.section-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--primary);
+}
+/* Badge */
+.badge {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+}
+.badge-danger { background: var(--danger-bg); color: var(--danger); }
+.badge-warning { background: var(--warning-bg); color: var(--warning); }
+/* Utility */
+.mb-8 { margin-bottom: 8px; }
+.mb-12 { margin-bottom: 12px; }
+.mb-16 { margin-bottom: 16px; }
+.text-center { text-align: center; }
+.text-muted { color: var(--text-sec); font-size: 12px; }
+/* Custom dietary list */
+.custom-diet-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--gray-bg);
+  border-radius: 8px;
+  margin-top: 6px;
+  font-size: 13px;
+}
+/* Expense category colors */
+.cat-餐飲 { background: var(--warning-bg); color: var(--warning); }
+.cat-交通 { background: var(--info-bg); color: var(--info); }
+.cat-住宿 { background: var(--success-bg); color: var(--success); }
+.cat-活動 { background: var(--purple-bg); color: var(--purple); }
+.cat-醫療 { background: var(--danger-bg); color: var(--danger); }
+.cat-其他 { background: var(--gray-bg); color: var(--gray); }
+/* Export button */
+.export-row {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- Header -->
+  <div class="header">
+    <h1>🚲 花東單車計畫</h1>
+    <div class="subtitle">114學年 7C 沐光班｜4/12–4/17｜39人｜≈389 km</div>
+  </div>
+
+  <!-- Tab Bar -->
+  <div class="tab-bar">
+    <button class="tab-btn active" data-tab="itinerary">📅 每日行程</button>
+    <button class="tab-btn" data-tab="maps">🗺 地圖導航</button>
+    <button class="tab-btn" data-tab="contacts">📞 緊急聯絡</button>
+    <button class="tab-btn" data-tab="dietary">🍽 飲食禁忌</button>
+    <button class="tab-btn" data-tab="expenses">💰 費用記錄</button>
+  </div>
+
+  <!-- Content -->
+  <div class="content">
+
+    <!-- ========== ITINERARY ========== -->
+    <div id="itinerary" class="page active"></div>
+
+    <!-- ========== MAPS ========== -->
+    <div id="maps" class="page"></div>
+
+    <!-- ========== CONTACTS ========== -->
+    <div id="contacts" class="page"></div>
+
+    <!-- ========== DIETARY ========== -->
+    <div id="dietary" class="page"></div>
+
+    <!-- ========== EXPENSES ========== -->
+    <div id="expenses" class="page"></div>
+
+  </div>
+</div>
+
+<script>
+// ===== DATA =====
+
+const POIS = {
+  transit_dongshan: { name:"冬山火車站", cat:"transit", lat:24.6363, lng:121.7921, note:"去程07:03出發｜回程12:53抵達" },
+  transit_hualien: { name:"花蓮火車站", cat:"transit", lat:23.9933, lng:121.6012, note:"去程08:43抵達｜回程11:22出發" },
+  transit_yuli: { name:"玉里火車站", cat:"transit", lat:23.3315, lng:121.3117, note:"4/17 08:20 搭區間車" },
+  stay_d1_ruisui: { name:"鄉村民宿（瑞穗）", cat:"stay", lat:23.4944, lng:121.3787, phone:"—", note:"合法民宿第250號｜溫泉路1段23巷4弄2號" },
+  stay_d2_sansiantai: { name:"三仙台大閘蟹民宿", cat:"stay", lat:23.1079, lng:121.3798, phone:"0932-027-821", note:"合法民宿第1553號｜長沙街94-1號" },
+  stay_d34_hunting: { name:"拉勞蘭獵校（新香蘭）", cat:"stay", lat:22.5758, lng:120.9888, phone:"08-978-1301", note:"第三、四晚；三餐供應" },
+  stay_d5_yuanxiang: { name:"原鄉商旅（玉里）", cat:"stay", lat:23.3314, lng:121.3170, phone:"03-888-7959", note:"合法民宿第176號｜民國路一段150號" },
+  lunch_d1_chenjia: { name:"陳家便當（鳳林）", cat:"lunch", day:"D1", lat:23.7467, lng:121.4488, phone:"03-876-3127", note:"外帶預訂39份" },
+  lunch_d1_market: { name:"鳳林中華市場", cat:"lunch", day:"D1", lat:23.7463, lng:121.4510, note:"備用採買" },
+  lunch_d2_711: { name:"7-ELEVEN 長濱門市", cat:"lunch", day:"D2", lat:23.3145, lng:121.4514, note:"24小時備用" },
+  lunch_d2_family: { name:"全家 長濱金剛店", cat:"lunch", day:"D2", lat:23.3227, lng:121.4584, note:"24小時" },
+  lunch_d3_jialulan: { name:"加路蘭遊憩區（發餐）", cat:"lunch", day:"D3", lat:22.8064, lng:121.1970, note:"保母車備便當" },
+  lunch_d3_qifu: { name:"其福便當（台東市）", cat:"lunch", day:"D3", lat:22.7534, lng:121.1347, phone:"08-933-8552", note:"備用，$65起" },
+  lunch_d3_henry: { name:"小亨利快餐便當", cat:"lunch", day:"D3", lat:22.7572, lng:121.1442, phone:"08-931-0331", note:"備用，$75" },
+  lunch_d5_shengye: { name:"盛野便當麵食（鹿野）", cat:"lunch", day:"D5", lat:22.9138, lng:121.1361, phone:"08-955-1155", note:"⭐4.6，$90" },
+  lunch_d5_luyexiang: { name:"鹿野香自助餐", cat:"lunch", day:"D5", lat:22.9120, lng:121.1359, phone:"08-955-2057", note:"備用，$70起" },
+  dinner_d2_shunda: { name:"順達漁港海鮮（成功）", cat:"dinner", day:"D2", lat:23.0991, lng:121.3787, phone:"08-985-0277", note:"⭐4.6，10:00–18:00" },
+  dinner_d2_qiyu: { name:"旗遇海味（成功）", cat:"dinner", day:"D2", lat:23.0978, lng:121.3811, phone:"0988-852-889", note:"備選，⭐4.1" },
+  dinner_d2_mama: { name:"Mama Sung海鮮", cat:"dinner", day:"D2", lat:23.0985, lng:121.3795, phone:"08-985-1671", note:"備選，⭐4.3，週四休" },
+  dinner_d34_hunting: { name:"拉勞蘭獵校", cat:"dinner", day:"D3,D4", lat:22.5758, lng:120.9888, phone:"08-978-1301", note:"✅ 獵校供應" },
+  dinner_d5_nordic: { name:"北歐餐桌外匯（玉里）", cat:"dinner", day:"D5", lat:23.3314, lng:121.3170, note:"✅ 外匯供應，原鄉商旅內用" },
+  spot_jialulan: { name:"加路蘭遊憩區", cat:"spot", lat:22.8064, lng:121.1970, note:"海景＋廁所，適合補水休息" },
+  spot_borang: { name:"伯朗大道觀景台（池上）", cat:"spot", lat:23.0961, lng:121.1966, note:"稻田景觀打卡點" },
+};
+
+const MEDICAL = [
+  { id:"medical_hualien_tzu_chi", name:"花蓮慈濟醫院", phone:"(03)856-1825", address:"花蓮市中央路三段707號", lat:23.9850, lng:121.6110, type:"hospital", days:["D1"] },
+  { id:"medical_hualien_mennonite", name:"門諾醫院", phone:"(03)824-1234", address:"花蓮市民權路44號", lat:23.9900, lng:121.6020, type:"hospital", days:["D1"] },
+  { id:"medical_shoufeng_clinic", name:"壽豐鄉衛生所", phone:"(03)865-2101", address:"壽豐鄉公園路28巷10號", lat:23.8600, lng:121.5500, type:"clinic", days:["D1"] },
+  { id:"medical_fenglin_veterans", name:"台北榮總鳳林分院", phone:"(03)876-4539", address:"鳳林鎮中正路一段2號", lat:23.7480, lng:121.4500, type:"hospital", days:["D1"] },
+  { id:"medical_fenglin_clinic", name:"鳳林鎮衛生所", phone:"(03)876-1116", address:"鳳林鎮公正街8-1號", lat:23.7460, lng:121.4490, type:"clinic", days:["D1"] },
+  { id:"medical_guangfu_clinic", name:"光復鄉衛生所", phone:"(03)870-1114", address:"光復鄉中學街158號", lat:23.6580, lng:121.4220, type:"clinic", days:["D1"] },
+  { id:"medical_ruisui_clinic", name:"瑞穗鄉衛生所", phone:"(03)887-2045", address:"瑞穗鄉民生街75號", lat:23.4944, lng:121.3787, type:"clinic", days:["D1","D2"] },
+  { id:"medical_yuli_veterans", name:"台北榮總玉里分院", phone:"(03)888-3141", address:"玉里鎮中華路448號", lat:23.3380, lng:121.3160, type:"hospital", days:["D2","D5","D6"] },
+  { id:"medical_yuli_tzu_chi", name:"玉里慈濟醫院", phone:"(03)888-2718", address:"玉里鎮民權街1號", lat:23.3310, lng:121.3140, type:"hospital", days:["D5","D6"] },
+  { id:"medical_yuli_clinic", name:"玉里鎮衛生所", phone:"(03)888-3161", address:"玉里鎮中山路一段50號", lat:23.3320, lng:121.3150, type:"clinic", days:["D5","D6"] },
+  { id:"medical_fuli_clinic", name:"富里鄉衛生所", phone:"(03)883-1114", address:"富里鄉中山路104號", lat:23.1990, lng:121.2850, type:"clinic", days:["D2"] },
+  { id:"medical_changbin_clinic", name:"長濱鄉衛生所", phone:"(08)983-1022", address:"長濱鄉長濱路83號", lat:23.3140, lng:121.4510, type:"clinic", days:["D2"] },
+  { id:"medical_chenggong_clinic", name:"成功鎮衛生所", phone:"(08)985-1419", address:"成功鎮中山東路64號", lat:23.1010, lng:121.3790, type:"clinic", days:["D2","D3"] },
+  { id:"medical_donghe_clinic", name:"東河鄉衛生所", phone:"(08)989-6200", address:"東河鄉南東河378號", lat:22.9650, lng:121.2580, type:"clinic", days:["D3"] },
+  { id:"medical_taitung_mackay", name:"台東馬偕紀念醫院", phone:"(08)931-0150", address:"台東市長沙街303巷1號", lat:22.7500, lng:121.1470, type:"hospital", days:["D3"] },
+  { id:"medical_taitung_christian", name:"台東基督教醫院", phone:"(08)996-0888", address:"台東市開封街350號", lat:22.7490, lng:121.1450, type:"hospital", days:["D3"] },
+  { id:"medical_taitung_mohw", name:"衛福部台東醫院", phone:"(08)932-4112", address:"台東市五權街1號", lat:22.7520, lng:121.1430, type:"hospital", days:["D3"] },
+  { id:"medical_taimali_clinic", name:"太麻里鄉衛生所", phone:"(08)978-1301", address:"太麻里鄉太麻里街194號", lat:22.6200, lng:121.0200, type:"clinic", days:["D3","D4"] },
+  { id:"medical_jinfeng_clinic", name:"金峰鄉衛生所", phone:"(08)975-1141", address:"金峰鄉嘉蘭村1鄰9號", lat:22.5800, lng:120.9900, type:"clinic", days:["D3","D4"] },
+  { id:"medical_luye_clinic", name:"鹿野鄉衛生所", phone:"(089)551-074", address:"鹿野鄉中華路二段51號", lat:22.9580, lng:121.1596, type:"clinic", days:["D5"] },
+  { id:"medical_guanshan_tzu_chi", name:"關山慈濟醫院", phone:"(08)981-4880", address:"關山鎮和平路125號", lat:23.0530, lng:121.1660, type:"hospital", days:["D5"] },
+  { id:"medical_chishang_clinic", name:"池上鄉衛生所", phone:"(08)986-2609", address:"池上鄉中山路101號", lat:23.0980, lng:121.2030, type:"clinic", days:["D5"] },
+];
+
+const DAYS = [
+  {
+    date:"4/12", day:1, weekday:"日", title:"冬山→花蓮→鳳林→瑞穗", distance:"≈67km",
+    accommodation:"鄉村民宿（瑞穗）｜合法民宿第250號｜溫泉路1段23巷4弄2號", accom_poi:"stay_d1_ruisui",
+    schedule:[
+      { time:"06:10–06:30", activity:"冬山車站集合", note:"共35人+35台車", poi:"transit_dongshan" },
+      { time:"06:30–06:50", activity:"進入月台候車", note:"自行車依序排列，車頭朝火車方向" },
+      { time:"07:03–08:43", activity:"搭乘區間車 4114 冬山→花蓮", note:"07:03出發，08:43抵達" },
+      { time:"08:43–09:10", activity:"出站及晨圈", note:"上廁所、裝水、裝備最終檢查", poi:"transit_hualien" },
+      { time:"09:10–12:00", activity:"花蓮站→自行車道→鳳林", note:"沿台9線南下，約55km" },
+      { time:"12:00–13:00", activity:"鳳林午餐", note:"陳家便當（前一天預訂39份）03-876-3127", poi:"lunch_d1_chenjia" },
+      { time:"13:00–17:00", activity:"鳳林→光復→瑞穗鄉村民宿", note:"合法民宿第250號", poi:"stay_d1_ruisui" },
+      { time:"17:00–18:00", activity:"Check in + 整理行李", note:"健保卡交保母車保管" },
+      { time:"18:00–19:00", activity:"晚餐", note:"待定：瑞穗溫泉區附近" },
+      { time:"19:00–20:00", activity:"各組檢討會、結束圈", note:"騎乘檢討（家長＆教師）" },
+      { time:"20:00–21:00", activity:"盥洗＋手札＋自由時間" },
+      { time:"21:00", activity:"就寢" },
+    ]
+  },
+  {
+    date:"4/13", day:2, weekday:"一", title:"瑞穗→玉長公路→長濱→成功", distance:"≈70km",
+    accommodation:"三仙台大閘蟹民宿｜合法民宿第1553號｜長沙街94-1號｜0932-027-821", accom_poi:"stay_d2_sansiantai",
+    schedule:[
+      { time:"06:00", activity:"起床" },
+      { time:"06:30–07:30", activity:"早餐", note:"瑞穗民宿附近（待定）" },
+      { time:"07:30–08:00", activity:"晨圈", note:"上廁所、裝水、車輛檢查" },
+      { time:"08:00–12:00", activity:"瑞穗→玉里→玉長公路→長濱寧埔", note:"玉長公路爬坡，注意補水" },
+      { time:"12:00–13:00", activity:"長濱午餐", note:"保母車備便當發放｜備用：7-11長濱", poi:"lunch_d2_711" },
+      { time:"13:00–17:30", activity:"長濱→三仙台→成功鎮公所", note:"台11線濱海騎乘" },
+      { time:"17:30–18:30", activity:"晚餐", note:"順達漁港海鮮 ⭐4.6", poi:"dinner_d2_shunda" },
+      { time:"18:30–19:00", activity:"三仙台大閘蟹民宿 Check in", note:"長沙街94之1號", poi:"stay_d2_sansiantai" },
+      { time:"19:00–20:00", activity:"各組檢討會、結束圈" },
+      { time:"21:00", activity:"就寢" },
+    ]
+  },
+  {
+    date:"4/14", day:3, weekday:"二", title:"成功→加路蘭→台東→新香蘭", distance:"≈80km",
+    accommodation:"新香蘭拉勞蘭獵校｜08-978-1301｜GPS: 22.5758, 120.9888", accom_poi:"stay_d34_hunting",
+    schedule:[
+      { time:"06:00", activity:"起床", note:"民宿供早餐，行李打包" },
+      { time:"07:30–08:00", activity:"晨圈", note:"上廁所、裝水、車輛檢查" },
+      { time:"08:00–12:30", activity:"成功→加路蘭遊憩區→台東市", note:"加路蘭有廁所和遮蔭廣場", poi:"spot_jialulan" },
+      { time:"12:30–13:30", activity:"加路蘭遊憩區發餐", note:"保母車備便當，海景席地用餐", poi:"lunch_d3_jialulan" },
+      { time:"13:30–17:00", activity:"台東火車頭→華源椰林大道→新香蘭" },
+      { time:"17:00–17:30", activity:"獵校報到＋整理行李", poi:"stay_d34_hunting" },
+      { time:"17:30–19:00", activity:"晚餐", note:"✅ 獵校（拉勞蘭部落）供應" },
+      { time:"21:00", activity:"就寢" },
+    ]
+  },
+  {
+    date:"4/15", day:4, weekday:"三", title:"獵校課程全日", distance:"0km（休息日）",
+    accommodation:"新香蘭拉勞蘭獵校（續住）", accom_poi:"stay_d34_hunting",
+    schedule:[
+      { time:"06:30–07:30", activity:"早餐", note:"✅ 獵校供應" },
+      { time:"08:00–12:00", activity:"獵校課程（上午）" },
+      { time:"12:00–13:00", activity:"午餐", note:"✅ 獵校供應" },
+      { time:"13:00–18:00", activity:"獵校課程（下午）" },
+      { time:"18:00–19:00", activity:"晚餐", note:"✅ 獵校供應" },
+      { time:"20:00–21:00", activity:"盥洗＋手札＋行李打包", note:"準備上褓姆車" },
+      { time:"21:00", activity:"就寢" },
+    ]
+  },
+  {
+    date:"4/16", day:5, weekday:"四", title:"新香蘭→鹿野→伯朗大道→玉里", distance:"≈112km（最長一天）",
+    accommodation:"原鄉商旅（玉里）｜合法民宿第176號｜民國路一段150號｜03-888-7959", accom_poi:"stay_d5_yuanxiang",
+    schedule:[
+      { time:"06:00", activity:"起床＋行李打包上褓姆車" },
+      { time:"06:30–07:30", activity:"早餐", note:"獵校提供後出發" },
+      { time:"07:30–08:00", activity:"晨圈", note:"上廁所、裝水、車輛檢查" },
+      { time:"08:00–11:30", activity:"新香蘭→華源海灣→台11→台9→鹿野", note:"地形起伏，注意補水" },
+      { time:"11:30–12:30", activity:"鹿野午餐", note:"盛野便當（前一天預訂）", poi:"lunch_d5_shengye" },
+      { time:"12:30–14:00", activity:"伯朗大道打卡", note:"池上稻田觀景台", poi:"spot_borang" },
+      { time:"14:00–17:30", activity:"伯朗大道→玉里" },
+      { time:"17:30–18:00", activity:"原鄉商旅 Check in", note:"玉里鎮民國路一段150號", poi:"stay_d5_yuanxiang" },
+      { time:"18:00–19:00", activity:"晚餐", note:"✅ 北歐餐桌外匯提供，原鄉商旅內用" },
+      { time:"21:00", activity:"就寢" },
+    ]
+  },
+  {
+    date:"4/17", day:6, weekday:"五", title:"玉里→花蓮→冬山（火車返程）", distance:"🚃 火車返程",
+    accommodation:"—", accom_poi:null,
+    schedule:[
+      { time:"06:00–07:30", activity:"早餐（民宿提供）＋行李打包" },
+      { time:"08:20", activity:"玉里站搭車 區間車 4517", note:"08:20出發→花蓮10:22到", poi:"transit_yuli" },
+      { time:"10:22–11:22", activity:"花蓮站等候轉車", note:"補充飲食、上廁所", poi:"transit_hualien" },
+      { time:"11:22", activity:"花蓮搭車 區間車 4177", note:"11:22出發→冬山12:53到" },
+      { time:"12:53", activity:"抵達冬山站 🎉", note:"活動圓滿結束", poi:"transit_dongshan" },
+    ]
+  },
+];
+
+const STAFF = [
+  { name:"李紫庭", role:"導師", phone:"0988-507-826" },
+  { name:"榮藴博", role:"領騎嚮導", phone:"0958-009-018" },
+  { name:"洪國銘", role:"陪騎", phone:"0919-366-699" },
+  { name:"陳鼎元", role:"陪騎", phone:"0922-686-969" },
+  { name:"薛維中", role:"陪騎", phone:"0910-200-913" },
+  { name:"郭哲均", role:"陪騎", phone:"0925-067-675" },
+  { name:"林威安", role:"陪騎", phone:"0901-359-378" },
+  { name:"簡玉渟", role:"陪騎", phone:"0910-397-775" },
+  { name:"蔡志瑋", role:"陪騎", phone:"0935-647-746" },
+  { name:"甘能中", role:"陪騎", phone:"0905-638-106" },
+  { name:"施志恆", role:"陪騎", phone:"0988-006-602" },
+  { name:"林政霖", role:"陪騎", phone:"0953-195-349" },
+  { name:"陳軒瑾", role:"押隊", phone:"—" },
+  { name:"林玉瓊", role:"褓姆車", phone:"0926-638-116" },
+  { name:"蔡易成", role:"褓姆車+醫護", phone:"0926-068-547" },
+  { name:"黃淑芬", role:"褓姆車", phone:"0958-347-13" },
+  { name:"連建絡老師", role:"學校留守", phone:"—" },
+  { name:"林柏亨", role:"家長留守", phone:"0963-332-419" },
+];
+
+const STUDENTS = [
+  { student:"蔡奕恩", contact:"鄭詩芸", phone:"0987-555-399", note:"蠶豆症，避免蠶豆類食材" },
+  { student:"陳宥安", contact:"陳盈秀", phone:"0933-562-857", note:"蛋奶素；蜂蜜過敏" },
+  { student:"徐子緒", contact:"（姓名未填）", phone:"0911-862-731" },
+  { student:"洪兆沁", contact:"（姓名未填）", phone:"0915-351-168" },
+  { student:"李仲恩", contact:"（姓名未填）", phone:"0916-893-526" },
+  { student:"郭宸希", contact:"郭哲均", phone:"0925-067-675", note:"家長即緊急聯絡人" },
+  { student:"吳緗綝", contact:"（姓名未填）", phone:"0932-162-301", note:"蛋奶素" },
+  { student:"榮藴博", contact:"蕭愛芳", phone:"0926-586-643", note:"領騎嚮導" },
+  { student:"施聿凡", contact:"施志恆 / 林怡慧", phone:"0988-006-602", note:"雙緊急聯絡人" },
+  { student:"薛博元", contact:"范維婷", phone:"⚠️ 未填", warning:true, note:"請向薛維中家長確認" },
+  { student:"曹軒瑀", contact:"曹游聖", phone:"0922-218-163" },
+  { student:"林子宸", contact:"楊筑雅", phone:"0987-889-930", note:"氣喘，確認備吸入器" },
+  { student:"歐泊禛", contact:"（姓名未填）", phone:"0966-438-851" },
+  { student:"張希璕", contact:"游雅嵐", phone:"0988-727-361", note:"五辛素+鍋邊素" },
+  { student:"蔡宜庭", contact:"蔡易成", phone:"0926-068-547", note:"家長即保母車司機" },
+  { student:"洪晞予", contact:"陳美茜", phone:"0937-067-421" },
+  { student:"張語珊", contact:"張清淵", phone:"0933-750-719", note:"甲殼類過敏" },
+  { student:"王湘誼", contact:"王哲為", phone:"0910-397-775", note:"皮膚過敏體質" },
+  { student:"林靖祐", contact:"林政霖", phone:"0953-195-349", note:"家長即陪騎" },
+  { student:"甘鈞云", contact:"柯招妃", phone:"⚠️ 未填", warning:true, note:"甲殼類過敏，請確認備藥" },
+  { student:"林謙穗", contact:"林柏亨", phone:"0963-332-419", note:"蛋奶素+鍋邊素" },
+  { student:"鄭旭豈", contact:"（姓名未填）", phone:"0911-836-334" },
+  { student:"謝語芩", contact:"謝江全 / 邱碧薇", phone:"0933-506-807", note:"雙緊急聯絡人" },
+];
+
+const ALLERGIES = [
+  { name:"蔡奕恩", condition:"蠶豆症（G6PD缺乏）", allergens:["蠶豆類食物","部分藥物"], medication:"無個人藥物", level:"danger", note:"需注意餐點食材，避開特定藥物（如阿斯匹靈類）" },
+  { name:"陳宥安", condition:"蜂蜜過敏", allergens:["蜂蜜"], medication:"無個人藥物", level:"warning", note:"避開含蜂蜜食品或飲料" },
+  { name:"張語珊", condition:"甲殼類過敏", allergens:["蝦","蟹","貝類"], medication:"人智學小糖球，隨身攜帶", level:"danger", note:"訂便當或晚餐務必確認無蝦蟹貝" },
+  { name:"甘鈞云", condition:"甲殼類過敏", allergens:["蝦","蟹","貝類"], medication:"⚠️ 無急救藥物", level:"danger", note:"請家長確認是否需備抗組織胺" },
+  { name:"王湘誼", condition:"皮膚過敏體質", allergens:["未指定"], medication:"抗組織胺+皮膚過敏藥，隨身攜帶", level:"warning", note:"" },
+  { name:"林子宸", condition:"氣喘（疑似）", allergens:["未指定"], medication:"⚠️ 無急救藥填寫", level:"warning", note:"請出發前確認是否需備氣喘吸入器" },
+];
+
+const DIET_SUMMARY = [
+  { cat:"🥩 葷食（無禁忌）", people:"約18人", bento:"33份（含確認無甲殼類）", note:"無特殊限制" },
+  { cat:"🥚 蛋奶素（嚴格）", people:"陳宥安、吳緗綝", bento:"2份純素便當", note:"可食蛋奶，不含五辛" },
+  { cat:"🌿 鍋邊素（彈性）", people:"張希璕、林謙穗", bento:"2份備用素便當", note:"可接受與肉同煮的菜" },
+  { cat:"🚫 不吃羊", people:"蔡奕恩", bento:"—", note:"訂餐時確認無羊肉即可" },
+  { cat:"🦐 不吃甲殼類", people:"張語珊、甘鈞云", bento:"—", note:"過敏，訂便當務必確認" },
+];
+
+const MY_MAPS = [
+  { label:"地圖一", url:"https://www.google.com/maps/d/edit?mid=15cxuvx4f2Ij5XLZ5oPUSBZ3xVEg9-D4&usp=sharing" },
+  { label:"地圖二", url:"https://www.google.com/maps/d/edit?mid=1kLk7Hly7-rHfP73SiOFLvtcnqirJoao&usp=sharing" },
+  { label:"地圖三", url:"https://www.google.com/maps/d/edit?mid=1awt5fG9NVHVONrUuHykVGe1Umlrs9k0&usp=sharing" },
+  { label:"地圖四", url:"https://www.google.com/maps/d/edit?mid=1JMMNiBf8m17IZVrhmw30tF66vZhH1nY&usp=sharing" },
+];
+
+// ===== HELPERS =====
+
+function openMap(lat, lng) {
+  window.open(`https://www.google.com/maps/search/?api=1&query=${lat},${lng}`, '_blank');
+}
+function callPhone(phone) {
+  window.location.href = `tel:${phone.replace(/[^0-9+]/g, '')}`;
+}
+function poiBtn(poiId) {
+  const p = POIS[poiId];
+  if (!p) return '';
+  return `<button class="poi-btn" onclick="openMap(${p.lat},${p.lng})">📍 導航</button>`;
+}
+function phoneLink(phone) {
+  if (!phone || phone === '—' || phone.includes('未填')) return phone || '';
+  return `<a class="phone-btn" href="tel:${phone.replace(/[^0-9+]/g, '')}">📞 ${phone}</a>`;
+}
+
+// ===== RENDER ITINERARY =====
+
+function renderItinerary() {
+  const el = document.getElementById('itinerary');
+  el.innerHTML = DAYS.map((d, idx) => {
+    const open = idx === 0 ? ' open' : '';
+    const rows = d.schedule.map(s => `
+      <tr>
+        <td style="white-space:nowrap;font-size:11px;color:var(--text-sec)">${s.time}</td>
+        <td>${s.activity}${s.poi ? ' '+poiBtn(s.poi) : ''}</td>
+        <td style="font-size:11px;color:var(--text-sec)">${s.note||''}</td>
+      </tr>
+    `).join('');
+    const accomHtml = d.accommodation && d.accommodation !== '—' ? `
+      <div class="accommodation">
+        <strong>🏠 住宿：</strong>${d.accommodation}
+        ${d.accom_poi ? ' '+poiBtn(d.accom_poi) : ''}
+      </div>` : '';
+    return `
+      <div class="card${open}" onclick="this.classList.toggle('open')">
+        <div class="card-header">
+          <span class="title">Day ${d.day} — ${d.date}(${d.weekday}) ${d.title}</span>
+          <span class="meta">${d.distance}</span>
+          <span class="arrow">▼</span>
+        </div>
+        <div class="card-body" onclick="event.stopPropagation()">
+          <table class="schedule-table">
+            <thead><tr><th style="width:108px">時間</th><th>活動</th><th>注意事項</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+          ${accomHtml}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ===== RENDER MAPS =====
+
+function renderMaps() {
+  const el = document.getElementById('maps');
+
+  const myMapsHtml = `
+    <div class="map-links">
+      ${MY_MAPS.map(m => `<a class="map-link" href="${m.url}" target="_blank">🗺 ${m.label}</a>`).join('')}
+    </div>`;
+
+  const cats = [
+    { key:'transit', icon:'🚉', label:'交通站點' },
+    { key:'stay', icon:'🏠', label:'住宿地點' },
+    { key:'lunch', icon:'🍱', label:'午餐餐廳' },
+    { key:'dinner', icon:'🍽', label:'晚餐餐廳' },
+    { key:'spot', icon:'🏖', label:'景點休息點' },
+    { key:'medical', icon:'🏥', label:'緊急醫療機構' },
+  ];
+
+  let html = myMapsHtml;
+  for (const cat of cats) {
+    let items;
+    if (cat.key === 'medical') {
+      items = MEDICAL.map(m => `
+        <div class="poi-card" onclick="openMap(${m.lat},${m.lng})">
+          <div class="poi-name">${m.name}</div>
+          <div class="poi-info">${m.address}</div>
+          <div class="poi-info">${m.type === 'hospital' ? '🏥 醫院' : '🩺 衛生所'}｜${m.days.join(', ')}</div>
+          ${m.phone ? `<a class="poi-phone" href="tel:${m.phone.replace(/[^0-9+]/g,'')}" onclick="event.stopPropagation()">📞 ${m.phone}</a>` : ''}
+        </div>
+      `).join('');
+    } else {
+      const entries = Object.entries(POIS).filter(([,v]) => v.cat === cat.key);
+      items = entries.map(([id, p]) => `
+        <div class="poi-card" onclick="openMap(${p.lat},${p.lng})">
+          <div class="poi-name">${p.name}</div>
+          <div class="poi-info">${p.day ? p.day+'｜' : ''}${p.note||''}</div>
+          ${p.phone ? `<a class="poi-phone" href="tel:${p.phone.replace(/[^0-9+]/g,'')}" onclick="event.stopPropagation()">📞 ${p.phone}</a>` : ''}
+        </div>
+      `).join('');
+    }
+    html += `<div class="cat-header">${cat.icon} ${cat.label}</div><div class="poi-grid">${items}</div>`;
+  }
+  el.innerHTML = html;
+}
+
+// ===== RENDER CONTACTS =====
+
+function renderContacts() {
+  const el = document.getElementById('contacts');
+
+  // Staff
+  const staffHtml = STAFF.map(s => `
+    <div class="contact-item">
+      <div class="contact-info">
+        <div class="contact-name">${s.name}</div>
+        <div class="contact-role">${s.role}</div>
+      </div>
+      ${s.phone !== '—' ? phoneLink(s.phone) : '<span class="text-muted">—</span>'}
+    </div>
+  `).join('');
+
+  // Emergency Numbers
+  const emerHtml = `
+    <div class="emergency-grid">
+      <a class="emer-card" href="tel:119" style="text-decoration:none"><div class="num">119</div><div class="label">緊急救護（消防）</div></a>
+      <a class="emer-card" href="tel:110" style="text-decoration:none"><div class="num">110</div><div class="label">報警</div></a>
+      <a class="emer-card" href="tel:112" style="text-decoration:none"><div class="num">112</div><div class="label">緊急求助</div></a>
+      <div class="emer-card"><div class="num" style="font-size:14px">📻</div><div class="label">VHF 145.000 MHz<br>UHF 433.000 MHz</div></div>
+    </div>
+  `;
+
+  // Student Contacts
+  const studentRows = STUDENTS.map(s => `
+    <tr class="${s.warning ? 'warning' : ''}">
+      <td><strong>${s.student}</strong></td>
+      <td>${s.contact}</td>
+      <td>${s.phone.includes('未填') ? `<span class="badge badge-danger">${s.phone}</span>` : `<a href="tel:${s.phone.replace(/[^0-9+]/g,'')}" style="color:var(--primary);text-decoration:none">${s.phone}</a>`}</td>
+      <td style="font-size:11px;color:var(--text-sec)">${s.note||''}</td>
+    </tr>
+  `).join('');
+
+  el.innerHTML = `
+    <div class="section-title">🚨 緊急求救號碼</div>
+    ${emerHtml}
+    <div class="section-title">👥 隨隊人員</div>
+    <div class="card"><div class="card-body" style="display:block;padding:0">${staffHtml}</div></div>
+    <div class="section-title mb-12" style="margin-top:16px">🎒 學生緊急聯絡人一覽</div>
+    <div class="card" style="overflow-x:auto">
+      <table class="student-table">
+        <thead><tr><th>學生</th><th>緊急聯絡人</th><th>電話</th><th>備註</th></tr></thead>
+        <tbody>${studentRows}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+// ===== RENDER DIETARY =====
+
+function renderDietary() {
+  const el = document.getElementById('dietary');
+
+  const allergyCards = ALLERGIES.map(a => `
+    <div class="allergy-card ${a.level}">
+      <div class="a-name">${a.name} <span class="badge badge-${a.level === 'danger' ? 'danger' : 'warning'}">${a.level === 'danger' ? '高風險' : '注意'}</span></div>
+      <div class="a-condition">${a.condition}</div>
+      <div class="allergy-tags">
+        ${a.allergens.map(x => `<span class="allergy-tag ${a.level}">${x}</span>`).join('')}
+      </div>
+      <div style="font-size:12px;margin-top:6px"><strong>藥物：</strong>${a.medication}</div>
+      ${a.note ? `<div style="font-size:11px;color:var(--text-sec);margin-top:4px">${a.note}</div>` : ''}
+    </div>
+  `).join('');
+
+  const summaryRows = DIET_SUMMARY.map(d => `
+    <tr><td>${d.cat}</td><td>${d.people}</td><td>${d.bento}</td><td style="font-size:11px">${d.note}</td></tr>
+  `).join('');
+
+  const customDiets = JSON.parse(localStorage.getItem('customDiets') || '[]');
+  const customList = customDiets.map((d, i) => `
+    <div class="custom-diet-item">
+      <span><strong>${d.name}</strong>（${d.role}）：${d.restrictions}</span>
+      <button class="btn btn-danger btn-sm" onclick="removeCustomDiet(${i})">✕</button>
+    </div>
+  `).join('');
+
+  el.innerHTML = `
+    <div class="section-title">⚠️ 過敏與健康注意事項</div>
+    ${allergyCards}
+
+    <div class="section-title" style="margin-top:16px">📋 飲食需求摘要</div>
+    <div class="card" style="overflow-x:auto">
+      <table class="diet-summary">
+        <thead><tr><th>類別</th><th>人數/姓名</th><th>便當備量</th><th>說明</th></tr></thead>
+        <tbody>${summaryRows}</tbody>
+      </table>
+    </div>
+    <div style="margin-top:8px;padding:10px 12px;background:var(--info-bg);border-radius:8px;font-size:12px">
+      <strong>🍱 便當預訂建議：</strong>葷食 33份（確認無甲殼類）＋ 素食 4份（嚴格素2份＋鍋邊素備2份）＝ <strong>共 37份</strong>（+2份備用）
+    </div>
+
+    <div class="section-title" style="margin-top:16px">✏️ 自訂飲食禁忌</div>
+    <div class="form-row">
+      <input class="form-input" id="diet-name" placeholder="姓名" style="min-width:80px;flex:.5">
+      <input class="form-input" id="diet-role" placeholder="身份（學生/家長）" style="min-width:80px;flex:.5">
+      <input class="form-input" id="diet-rest" placeholder="禁忌項目" style="min-width:120px;flex:1">
+      <button class="btn btn-primary" onclick="addCustomDiet()">新增</button>
+    </div>
+    <div id="custom-diet-list">${customList}</div>
+  `;
+}
+
+function addCustomDiet() {
+  const name = document.getElementById('diet-name').value.trim();
+  const role = document.getElementById('diet-role').value.trim();
+  const rest = document.getElementById('diet-rest').value.trim();
+  if (!name || !rest) return;
+  const list = JSON.parse(localStorage.getItem('customDiets') || '[]');
+  list.push({ name, role, restrictions: rest });
+  localStorage.setItem('customDiets', JSON.stringify(list));
+  renderDietary();
+}
+function removeCustomDiet(idx) {
+  const list = JSON.parse(localStorage.getItem('customDiets') || '[]');
+  list.splice(idx, 1);
+  localStorage.setItem('customDiets', JSON.stringify(list));
+  renderDietary();
+}
+
+// ===== RENDER EXPENSES =====
+
+function getExpenses() {
+  return JSON.parse(localStorage.getItem('expenses') || '[]');
+}
+function saveExpenses(list) {
+  localStorage.setItem('expenses', JSON.stringify(list));
+}
+
+function renderExpenses() {
+  const el = document.getElementById('expenses');
+  const expenses = getExpenses();
+
+  const total = expenses.reduce((s, e) => s + e.amount, 0);
+  const withReceipt = expenses.filter(e => e.receipt_images && e.receipt_images.length > 0).length;
+  const unsettled = expenses.filter(e => !e.settled).reduce((s, e) => s + e.amount, 0);
+
+  // Group by day
+  const dayOrder = ['4/12','4/13','4/14','4/15','4/16','4/17','其他'];
+  const grouped = {};
+  expenses.forEach(e => {
+    const key = e.day || '其他';
+    if (!grouped[key]) grouped[key] = [];
+    grouped[key].push(e);
+  });
+
+  let listHtml = '';
+  for (const day of dayOrder) {
+    const items = grouped[day];
+    if (!items || items.length === 0) continue;
+    const dayTotal = items.reduce((s, e) => s + e.amount, 0);
+    listHtml += `<div class="day-group-header"><span>${day}</span><span>小計 $${dayTotal.toLocaleString()}</span></div>`;
+    listHtml += items.map(e => `
+      <div class="expense-item ${e.settled ? 'settled' : ''}">
+        <span class="exp-cat cat-${e.category}">${e.category}</span>
+        <span class="exp-desc">
+          ${e.description}
+          ${e.receipt_images && e.receipt_images.length ? `<span class="badge badge-warning">📷${e.receipt_images.length}</span>` : ''}
+        </span>
+        <span class="exp-amount">$${e.amount.toLocaleString()}</span>
+        <span class="exp-actions">
+          <button class="btn btn-sm ${e.settled ? 'btn-outline' : 'btn-success'}" onclick="toggleSettle(${e.id})">${e.settled ? '取消' : '結算'}</button>
+          <button class="btn btn-sm btn-danger" onclick="deleteExpense(${e.id})">✕</button>
+        </span>
+      </div>
+    `).join('');
+  }
+
+  el.innerHTML = `
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-val">$${total.toLocaleString()}</div><div class="stat-label">總支出</div></div>
+      <div class="stat-card"><div class="stat-val">${withReceipt}</div><div class="stat-label">有憑證</div></div>
+      <div class="stat-card"><div class="stat-val">$${unsettled.toLocaleString()}</div><div class="stat-label">待結算</div></div>
+    </div>
+
+    <div class="export-row">
+      <button class="btn btn-outline btn-sm" onclick="exportExpenses()">📥 匯出結算摘要</button>
+    </div>
+
+    <div class="expense-form">
+      <div class="row">
+        <select id="exp-day" style="flex:.4">
+          <option value="4/12">4/12 D1</option>
+          <option value="4/13">4/13 D2</option>
+          <option value="4/14">4/14 D3</option>
+          <option value="4/15">4/15 D4</option>
+          <option value="4/16">4/16 D5</option>
+          <option value="4/17">4/17 D6</option>
+        </select>
+        <select id="exp-cat" style="flex:.4">
+          <option>餐飲</option><option>交通</option><option>住宿</option><option>活動</option><option>醫療</option><option>其他</option>
+        </select>
+      </div>
+      <div class="row">
+        <input id="exp-desc" class="form-input" placeholder="說明" style="flex:1">
+        <input id="exp-amount" class="form-input" type="number" placeholder="金額" style="flex:.4">
+      </div>
+      <div class="row">
+        <label class="btn btn-outline btn-sm" style="cursor:pointer">
+          📷 拍照/選取收據
+          <input type="file" id="exp-receipt" accept="image/*" multiple capture="environment" style="display:none" onchange="previewReceipts(this)">
+        </label>
+      </div>
+      <div class="receipt-preview" id="receipt-preview"></div>
+      <button class="btn btn-primary" onclick="addExpense()" style="width:100%;margin-top:8px">＋ 新增費用</button>
+    </div>
+
+    <div class="card">
+      ${listHtml || '<div style="padding:24px;text-align:center;color:var(--text-sec)">尚無費用記錄</div>'}
+    </div>
+  `;
+}
+
+let pendingReceipts = [];
+function previewReceipts(input) {
+  pendingReceipts = [];
+  const preview = document.getElementById('receipt-preview');
+  preview.innerHTML = '';
+  for (const file of input.files) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      pendingReceipts.push(e.target.result);
+      preview.innerHTML += `<img src="${e.target.result}">`;
+    };
+    reader.readAsDataURL(file);
+  }
+}
+
+function addExpense() {
+  const day = document.getElementById('exp-day').value;
+  const category = document.getElementById('exp-cat').value;
+  const description = document.getElementById('exp-desc').value.trim();
+  const amount = parseInt(document.getElementById('exp-amount').value);
+  if (!description || !amount) return;
+  const list = getExpenses();
+  list.push({
+    id: Date.now(),
+    day, category, description, amount,
+    receipt_images: [...pendingReceipts],
+    settled: false,
+    created_at: new Date().toISOString(),
+  });
+  saveExpenses(list);
+  pendingReceipts = [];
+  renderExpenses();
+}
+
+function toggleSettle(id) {
+  const list = getExpenses();
+  const item = list.find(e => e.id === id);
+  if (item) item.settled = !item.settled;
+  saveExpenses(list);
+  renderExpenses();
+}
+
+function deleteExpense(id) {
+  if (!confirm('確定要刪除此筆費用？')) return;
+  const list = getExpenses().filter(e => e.id !== id);
+  saveExpenses(list);
+  renderExpenses();
+}
+
+function exportExpenses() {
+  const expenses = getExpenses();
+  if (expenses.length === 0) { alert('無費用記錄可匯出'); return; }
+  const total = expenses.reduce((s, e) => s + e.amount, 0);
+  let txt = '花東單車計畫 — 費用結算摘要\n';
+  txt += `匯出日期：${new Date().toLocaleDateString('zh-TW')}\n`;
+  txt += '='.repeat(40) + '\n\n';
+  const dayOrder = ['4/12','4/13','4/14','4/15','4/16','4/17'];
+  for (const day of dayOrder) {
+    const items = expenses.filter(e => e.day === day);
+    if (!items.length) continue;
+    const sub = items.reduce((s, e) => s + e.amount, 0);
+    txt += `【${day}】小計 $${sub.toLocaleString()}\n`;
+    items.forEach(e => {
+      txt += `  ${e.settled ? '✅' : '⬜'} ${e.category} — ${e.description}：$${e.amount.toLocaleString()}\n`;
+    });
+    txt += '\n';
+  }
+  txt += '='.repeat(40) + '\n';
+  txt += `總計：$${total.toLocaleString()}\n`;
+  txt += `已結算：$${expenses.filter(e => e.settled).reduce((s,e) => s + e.amount, 0).toLocaleString()}\n`;
+  txt += `待結算：$${expenses.filter(e => !e.settled).reduce((s,e) => s + e.amount, 0).toLocaleString()}\n`;
+
+  const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '花東單車費用結算.txt';
+  a.click();
+}
+
+// ===== TAB NAVIGATION =====
+
+function switchTab(tabId) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tabId));
+  document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === tabId));
+  window.location.hash = tabId;
+}
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+});
+
+// Hash routing
+function handleHash() {
+  const hash = window.location.hash.replace('#', '') || 'itinerary';
+  switchTab(hash);
+}
+window.addEventListener('hashchange', handleHash);
+
+// ===== INIT =====
+
+renderItinerary();
+renderMaps();
+renderContacts();
+renderDietary();
+renderExpenses();
+handleHash();
+</script>
+</body>
+</html>
