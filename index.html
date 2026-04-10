@@ -582,6 +582,11 @@ firebase.initializeApp({
 const db = firebase.firestore();
 const stg = firebase.storage();
 
+// 啟用離線持久化 — 頁面重整不會丟失資料
+db.enablePersistence({ synchronizeTabs: true }).catch(err => {
+  console.warn('Firestore persistence error:', err.code);
+});
+
 // ===== USER NAME =====
 function getUserName() {
   return localStorage.getItem('userName') || '';
@@ -1068,6 +1073,15 @@ let pendingFiles = [];
 db.collection('expenses').orderBy('created_at', 'asc').onSnapshot(snap => {
   allExpenses = snap.docs.map(d => ({ _id: d.id, ...d.data() }));
   renderExpenses();
+}, err => {
+  console.error('Firestore 讀取失敗:', err);
+  const el = document.getElementById('expenses');
+  if (el) {
+    const warn = document.createElement('div');
+    warn.style.cssText = 'background:#fff3cd;color:#856404;padding:12px;border-radius:8px;margin:12px 0;text-align:center';
+    warn.innerHTML = '⚠️ Firebase 連線失敗，請檢查：<br>1. Firebase Console → Firestore → 規則是否開啟<br>2. 網路連線是否正常<br><small style="color:#999">錯誤：' + err.message + '</small>';
+    el.prepend(warn);
+  }
 });
 
 function renderExpenses() {
@@ -1268,10 +1282,16 @@ function exportExpenses() {
     if (!items.length) continue;
     const sub = items.reduce((s, e) => s + (e.amount||0), 0);
     txt += `【${day}】小計 $${sub.toLocaleString()}\n`;
-    items.forEach(e => {
+    items.forEach((e, idx) => {
       txt += `  ${e.settled ? '✅' : '⬜'} ${e.category} — ${e.description}：$${(e.amount||0).toLocaleString()} (${e.uploader||'—'})`;
-      if (e.receipt_urls && e.receipt_urls.length) txt += ` 📷${e.receipt_urls.length}`;
+      if (e.receipt_urls && e.receipt_urls.length) txt += ` 📷${e.receipt_urls.length}張`;
       txt += '\n';
+      // 附上收據連結
+      if (e.receipt_urls && e.receipt_urls.length) {
+        e.receipt_urls.forEach((url, i) => {
+          txt += `    收據${i+1}: ${url}\n`;
+        });
+      }
     });
     txt += '\n';
   }
@@ -1280,11 +1300,28 @@ function exportExpenses() {
   txt += `已結算：$${expenses.filter(e => e.settled).reduce((s,e) => s + (e.amount||0), 0).toLocaleString()}\n`;
   txt += `待結算：$${expenses.filter(e => !e.settled).reduce((s,e) => s + (e.amount||0), 0).toLocaleString()}\n`;
 
-  const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = '花東單車費用結算.txt';
-  a.click();
+  // 同時產生 CSV（方便 Excel 開啟）
+  let csv = '\uFEFF日期,類別,說明,金額,記錄人,已結算,收據連結\n';
+  expenses.forEach(e => {
+    const urls = (e.receipt_urls || []).join(' ; ');
+    csv += `"${e.day}","${e.category}","${e.description}",${e.amount||0},"${e.uploader||''}","${e.settled?'是':'否'}","${urls}"\n`;
+  });
+
+  // 下載 TXT
+  const blob1 = new Blob([txt], { type: 'text/plain;charset=utf-8' });
+  const a1 = document.createElement('a');
+  a1.href = URL.createObjectURL(blob1);
+  a1.download = '花東單車費用結算.txt';
+  a1.click();
+
+  // 下載 CSV
+  setTimeout(() => {
+    const blob2 = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const a2 = document.createElement('a');
+    a2.href = URL.createObjectURL(blob2);
+    a2.download = '花東單車費用結算.csv';
+    a2.click();
+  }, 500);
 }
 
 // ===== TAB NAVIGATION =====
