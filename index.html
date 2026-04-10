@@ -34,6 +34,7 @@
   --shadow: 0 1px 3px rgba(0,0,0,.12), 0 1px 2px rgba(0,0,0,.08);
 }
 * { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-padding-top: 100px; }
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans TC", sans-serif;
   background: var(--bg);
@@ -247,7 +248,7 @@ body {
   text-align: left;
   font-weight: 600;
   position: sticky;
-  top: 104px;
+  top: 90px;
 }
 .student-table td { padding: 8px; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
 .student-table tr.warning td { background: var(--warning-bg); }
@@ -1427,7 +1428,10 @@ function exportExpenses() {
 function switchTab(tabId) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tabId));
   document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === tabId));
-  window.location.hash = tabId;
+  // 用 replaceState 避免瀏覽器自動捲動到 hash 錨點
+  history.replaceState(null, '', '#' + tabId);
+  // 切換分頁後捲到頂部
+  window.scrollTo({ top: 0 });
 }
 
 document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -1443,12 +1447,26 @@ window.addEventListener('hashchange', handleHash);
 
 // ===== INIT =====
 
+// 動態計算 sticky header 高度，設定 CSS 變數
+function updateStickyHeight() {
+  const stickyEl = document.querySelector('.sticky-top');
+  if (stickyEl) {
+    const h = stickyEl.offsetHeight;
+    document.documentElement.style.setProperty('--sticky-h', h + 'px');
+    document.documentElement.style.scrollPaddingTop = h + 'px';
+    // 更新表格 sticky th
+    document.querySelectorAll('.student-table th').forEach(th => th.style.top = h + 'px');
+  }
+}
+window.addEventListener('resize', updateStickyHeight);
+
 renderItinerary();
 renderMaps();
 renderContacts();
 renderDietary();
 // renderExpenses() is triggered automatically by Firestore onSnapshot listener
 handleHash();
+updateStickyHeight();
 </script>
 </body>
 </html>
